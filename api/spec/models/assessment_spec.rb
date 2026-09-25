@@ -28,6 +28,22 @@ RSpec.describe Assessment, type: :model do
       subject = described_class.new(name: 'Jr. Backend Engineer', time_limit_min: 30, created_by: 1)
       expect { subject.save }.to raise_error(RuntimeError, /please set Current.tenant_id/)
     end
+
+    # S3-AC1 / S3-AC2: duplicates inside the same request, matched ignoring case and extra spaces
+    it 'returns error when two skills have the same label ignoring case and spaces' do
+      within_organization do
+        subject = described_class.new(
+          name: 'Jr. Backend Engineer', time_limit_min: 30, created_by: 1,
+          assessment_skills_attributes: [
+            skill_attributes(skill_label: 'RESTful API Design', display_order: 0),
+            skill_attributes(skill_label: ' restful  api design ', display_order: 1)
+          ]
+        )
+        expect(subject.save).to eq(false)
+        expect(subject.errors.full_messages.join).to include('RESTful API Design')
+        expect(described_class.count).to eq(0)
+      end
+    end
   end
 
   describe 'Create' do
@@ -56,5 +72,13 @@ RSpec.describe Assessment, type: :model do
         expect(described_class.first).to eq(mine)
       end
     end
+  end
+
+  def skill_attributes(**overrides)
+    {
+      skill_label: 'Test Skill', is_custom: true, expected_level: 3, display_order: 0,
+      l1_anchor: 'Level 1 behaviour', l2_anchor: 'Level 2 behaviour', l3_anchor: 'Level 3 behaviour',
+      l4_anchor: 'Level 4 behaviour', l5_anchor: 'Level 5 behaviour'
+    }.merge(overrides)
   end
 end
