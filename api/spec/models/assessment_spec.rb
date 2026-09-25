@@ -29,7 +29,6 @@ RSpec.describe Assessment, type: :model do
       expect { subject.save }.to raise_error(RuntimeError, /please set Current.tenant_id/)
     end
 
-    # S3-AC1 / S3-AC2: duplicates inside the same request, matched ignoring case and extra spaces
     it 'returns error when two skills have the same label ignoring case and spaces' do
       within_organization do
         subject = described_class.new(
@@ -44,6 +43,19 @@ RSpec.describe Assessment, type: :model do
         expect(described_class.count).to eq(0)
       end
     end
+
+    it 'returns error when a taxonomy skill and a custom skill have the same label' do
+      within_organization do
+        subject = described_class.new(
+          name: 'Jr. Backend Engineer', time_limit_min: 30, created_by: 1,
+          assessment_skills_attributes: [
+            skill_attributes(skill_label: 'RESTful API Design', is_custom: false),
+            skill_attributes(skill_label: 'RESTful API Design', is_custom: true, display_order: 1)
+          ]
+        )
+        expect(subject.save).to eq(false)
+      end
+    end
   end
 
   describe 'Create' do
@@ -52,6 +64,41 @@ RSpec.describe Assessment, type: :model do
         subject = described_class.new(name: 'Jr. Backend Engineer', time_limit_min: 30, created_by: 1)
         expect(subject.save).to eq(true)
         expect(subject.tenant_id).to eq(@organization.id)
+      end
+    end
+  end
+
+  describe 'Update' do
+    before do
+      within_organization do
+        @assessment = described_class.new(
+          name: 'Jr. Backend Engineer', time_limit_min: 30, created_by: 1,
+          assessment_skills_attributes: [skill_attributes(skill_label: 'RESTful API Design')]
+        )
+        @assessment.save!
+      end
+    end
+
+    it 'returns error when adding a skill with the same label as a saved one' do
+      within_organization do
+        result = @assessment.update(
+          time_limit_min: 45,
+          assessment_skills_attributes: [skill_attributes(skill_label: 'restful api design', display_order: 1)]
+        )
+        expect(result).to eq(false)
+        expect(@assessment.reload.time_limit_min).to eq(30)
+        expect(@assessment.assessment_skills.size).to eq(1)
+      end
+    end
+
+    it 'returns ok when removing one copy of an existing duplicate' do
+      within_organization do
+        copy = @assessment.assessment_skills.create!(
+          skill_attributes(skill_label: 'RESTful API Design', display_order: 1)
+        )
+        result = @assessment.update(assessment_skills_attributes: [{ id: copy.id, _destroy: true }])
+        expect(result).to eq(true)
+        expect(@assessment.reload.assessment_skills.size).to eq(1)
       end
     end
   end
