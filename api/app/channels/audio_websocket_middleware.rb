@@ -517,16 +517,20 @@ class AudioWebSocketMiddleware
     state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
-          next if state.session.reload.ended?
-
-          Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error', failure_code: 'candidate_disconnected')
-          EM.schedule { state.gemini_client&.close }
+          EM.schedule { state.gemini_client&.close } if end_after_grace_period(state)
         end
       rescue StandardError => e
         Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")
       end
     end
+  end
+
+  def end_after_grace_period(state)
+    return false if state.session.reload.ended?
+
+    Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
+    Sessions::EndHandler.new(state.session).call(reason: 'error', failure_code: 'candidate_disconnected')
+    true
   end
 
   # Sends session_ended then closes both connections; 300ms delay lets the frontend process the JSON

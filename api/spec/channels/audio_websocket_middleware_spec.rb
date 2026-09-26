@@ -74,4 +74,22 @@ RSpec.describe AudioWebSocketMiddleware do
       expect(@socket.closed).to eq(true)
     end
   end
+
+  describe 'when the candidate does not come back within the grace period' do
+    def expire_grace_period
+      state = described_class::ConnectionState.new
+      state.session = @session
+      described_class.new(nil).send(:end_after_grace_period, state)
+    end
+
+    it 'ends a running interview as candidate_disconnected' do
+      @session.update!(status: 'active', started_at: 5.minutes.ago)
+
+      expire_grace_period
+
+      @session.reload
+      expect(@session.status).to eq('ended')
+      expect(@session.failure_code).to eq('candidate_disconnected')
+    end
+  end
 end
