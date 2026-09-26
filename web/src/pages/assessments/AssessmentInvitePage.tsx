@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { AlertCircle, ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -40,15 +40,18 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+    <div className="flex items-center justify-between gap-3 py-3 px-4">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
-        <div className="space-y-0.5">
+        <div className="space-y-0.5 min-w-0">
           <div className="text-sm font-medium">{displayName}</div>
           {(isFailed || couldNotStart) && (
-            <div className="text-xs text-destructive">{session.failure_message ?? "Reason not recorded"}</div>
+            <div className="flex items-start gap-1 text-xs text-destructive">
+              <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="break-words">{session.failure_message ?? "Reason not recorded"}</span>
+            </div>
           )}
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
@@ -58,7 +61,7 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         {isPending && !couldNotStart && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
