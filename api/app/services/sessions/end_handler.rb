@@ -32,6 +32,7 @@ module Sessions
           ended_at:         Time.current,
           duration_seconds: duration,
           failure_code:     failure_code,
+          failure_detail:   nil,
           failed_at:        failure_code && Time.current
         )
 
