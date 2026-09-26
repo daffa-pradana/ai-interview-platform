@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, CircleAlert, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -234,7 +234,10 @@ export default function InterviewPage() {
 
   if (interviewState === "failed") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+          <CircleAlert className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        </div>
         <h2 className="text-xl font-semibold">Interview unavailable</h2>
         <p className="text-sm text-muted-foreground">{fatalMessage}</p>
       </div>
