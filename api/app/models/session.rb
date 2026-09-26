@@ -6,10 +6,10 @@ class Session < ApplicationRecord
   STATUSES   = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
   FAILURE_MESSAGES = {
-    'assessment_invalid' => "Interview couldn't start: the assessment's skills need fixing",
-    'start_failed' => "Interview couldn't start because of a system error",
-    'candidate_disconnected' => 'Candidate disconnected and did not come back',
-    'ai_connection_lost' => 'Connection to the AI interviewer was lost'
+    'assessment_invalid' => 'Assessment needs fixing',
+    'start_failed' => "Couldn't start due to a system error",
+    'candidate_disconnected' => 'Candidate disconnected',
+    'ai_connection_lost' => 'AI interviewer connection lost'
   }.freeze
 
   belongs_to :assessment
@@ -48,7 +48,7 @@ class Session < ApplicationRecord
   def failure_message
     return if failure_code.blank?
 
-    [FAILURE_MESSAGES.fetch(failure_code), failure_detail && "(#{failure_detail})"].compact.join(' ')
+    "#{[FAILURE_MESSAGES.fetch(failure_code), failure_detail && "(#{failure_detail})"].compact.join(' ')}."
   end
 
   private

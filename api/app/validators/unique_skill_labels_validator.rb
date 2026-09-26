@@ -5,7 +5,7 @@ class UniqueSkillLabelsValidator < ActiveModel::Validator
     duplicate = labels(record).group_by(&:downcase).values.find { |group| group.size > 1 }
     return unless duplicate
 
-    record.errors.add(:base, "Skill '#{duplicate.first}' is listed more than once")
+    record.errors.add(:base, :duplicate_skill_labels, message: "Skill '#{duplicate.first}' is listed more than once")
   end
 
   private
