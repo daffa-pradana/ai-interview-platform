@@ -37,6 +37,7 @@ export default function InterviewPage() {
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
+  const [fatalMessage, setFatalMessage] = useState<string | null>(null);
   const micMutedRef = useRef(false);
 
   // Fetch candidate info
@@ -138,6 +139,7 @@ export default function InterviewPage() {
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onFatalError: setFatalMessage,
   });
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
@@ -222,6 +224,15 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (interviewState === "failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <h2 className="text-xl font-semibold">Interview unavailable</h2>
+        <p className="text-sm text-muted-foreground">{fatalMessage}</p>
       </div>
     );
   }
