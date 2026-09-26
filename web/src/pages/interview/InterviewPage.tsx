@@ -149,6 +149,10 @@ export default function InterviewPage() {
   muteRef.current = mute;
   unmuteRef.current = unmute;
 
+  useEffect(() => {
+    if (interviewState === "failed") stopCapture();
+  }, [interviewState, stopCapture]);
+
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
       micMutedRef.current = false;
