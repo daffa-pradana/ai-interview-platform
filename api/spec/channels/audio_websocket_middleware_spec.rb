@@ -3,23 +3,6 @@
 require 'rails_helper'
 
 RSpec.describe AudioWebSocketMiddleware do
-  class FakeSocket
-    attr_reader :sent, :closed
-
-    def initialize
-      @sent = []
-      @closed = false
-    end
-
-    def send(message)
-      @sent << JSON.parse(message)
-    end
-
-    def close
-      @closed = true
-    end
-  end
-
   before do
     @organization = Organization.create!(
       name: 'Test Org', scheme: 'test-org', identifier: 'test-org', host: 'test-org.test'
@@ -33,7 +16,22 @@ RSpec.describe AudioWebSocketMiddleware do
       @session = Session.new(assessment: @assessment, candidate_name: 'Test Candidate A')
       @session.save!
     end
-    @socket = FakeSocket.new
+    @socket = Class.new do
+      attr_reader :sent, :closed
+
+      def initialize
+        @sent = []
+        @closed = false
+      end
+
+      def send(message)
+        @sent << JSON.parse(message)
+      end
+
+      def close
+        @closed = true
+      end
+    end.new
   end
 
   def open_interview
@@ -69,12 +67,10 @@ RSpec.describe AudioWebSocketMiddleware do
 
       open_interview
 
-      expect(@socket.sent).to eq([{
-        'type' => 'error',
-        'code' => 'assessment_invalid',
-        'recoverable' => false,
-        'message' => "This interview can't start right now. Please contact the person who invited you."
-      }])
+      expect(@socket.sent).to eq(
+        [{ 'type' => 'error', 'code' => 'assessment_invalid', 'recoverable' => false,
+           'message' => "This interview can't start right now. Please contact the person who invited you." }]
+      )
       expect(@socket.closed).to eq(true)
     end
   end
