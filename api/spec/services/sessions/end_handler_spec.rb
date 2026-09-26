@@ -25,6 +25,16 @@ RSpec.describe Sessions::EndHandler do
     expect(@session.failure_code).to eq('ai_connection_lost')
   end
 
+  it 'does not keep the detail of an earlier failure' do
+    @session.update!(failure_code: 'assessment_invalid', failure_detail: 'duplicate skills')
+
+    described_class.new(@session).call(reason: 'error', failure_code: 'ai_connection_lost')
+
+    @session.reload
+    expect(@session.failure_code).to eq('ai_connection_lost')
+    expect(@session.failure_detail).to be_nil
+  end
+
   it 'does not record a failure for a normal end' do
     described_class.new(@session).call(reason: 'manual_assessor')
 
