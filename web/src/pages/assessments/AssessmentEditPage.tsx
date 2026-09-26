@@ -25,6 +25,8 @@ import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { FormErrorAlert } from "@/components/ui/form-error-alert";
+import SkillNameTip from "@/components/assessment/SkillNameTip";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
@@ -143,6 +145,7 @@ export default function AssessmentEditPage() {
 
         <div className="space-y-3">
           <Label>Skills to assess</Label>
+          <SkillNameTip />
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
               No skills added yet.
@@ -169,7 +172,7 @@ export default function AssessmentEditPage() {
         </div>
 
         <Separator />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <FormErrorAlert message={error} onDismiss={() => setError(null)} />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
