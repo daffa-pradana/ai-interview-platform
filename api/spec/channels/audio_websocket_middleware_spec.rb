@@ -91,5 +91,15 @@ RSpec.describe AudioWebSocketMiddleware do
       expect(@session.status).to eq('ended')
       expect(@session.failure_code).to eq('candidate_disconnected')
     end
+
+    it 'leaves an interview that never started pending and retryable' do
+      @session.record_failure!('assessment_invalid', 'duplicate skills')
+
+      expire_grace_period
+
+      @session.reload
+      expect(@session.status).to eq('pending')
+      expect(@session.failure_code).to eq('assessment_invalid')
+    end
   end
 end
