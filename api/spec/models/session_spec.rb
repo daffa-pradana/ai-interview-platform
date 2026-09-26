@@ -53,19 +53,16 @@ RSpec.describe Session, type: :model do
   end
 
   describe 'failure_message' do
-    it 'describes the failure for the assessor, including the detail' do
-      @session.record_failure!('assessment_invalid', "Skill 'RESTful API Design' is listed more than once")
+    it 'describes the failure for the assessor, including the short reason' do
+      @session.record_failure!('assessment_invalid', 'duplicate skills')
 
-      expect(@session.failure_message).to eq(
-        "Interview couldn't start: the assessment's skills need fixing " \
-        "(Skill 'RESTful API Design' is listed more than once)"
-      )
+      expect(@session.failure_message).to eq('Assessment needs fixing (duplicate skills).')
     end
 
     it 'describes the failure without a detail' do
       @session.record_failure!('ai_connection_lost')
 
-      expect(@session.failure_message).to eq('Connection to the AI interviewer was lost')
+      expect(@session.failure_message).to eq('AI interviewer connection lost.')
     end
 
     it 'returns nil when no failure was recorded' do

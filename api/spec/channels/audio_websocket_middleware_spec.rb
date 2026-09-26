@@ -41,7 +41,7 @@ RSpec.describe AudioWebSocketMiddleware do
   end
 
   describe 'when the interview cannot start' do
-    it 'records assessment_invalid with the duplicated skill when the assessment has a duplicate' do
+    it 'records assessment_invalid with a short reason when the assessment has a duplicate' do
       @assessment.assessment_skills.create!(skill_attributes(skill_label: 'RESTful API Design', display_order: 1))
 
       open_interview
@@ -49,7 +49,7 @@ RSpec.describe AudioWebSocketMiddleware do
       @session.reload
       expect(@session.status).to eq('pending')
       expect(@session.failure_code).to eq('assessment_invalid')
-      expect(@session.failure_detail).to eq("Skill 'RESTful API Design' is listed more than once")
+      expect(@session.failure_detail).to eq('duplicate skills')
     end
 
     it 'records start_failed without the exception text for an unexpected error' do

@@ -34,14 +34,21 @@ RSpec.describe Sessions::StartHandler do
     expect(@session.reload.failure_code).to be_nil
   end
 
-  it 'raises InvalidAssessment naming the skill when the assessment already has a duplicate' do
+  it 'raises InvalidAssessment with a short reason when the assessment already has a duplicate' do
     @assessment.assessment_skills.create!(skill_attributes(skill_label: 'RESTful API Design', display_order: 1))
 
     expect { described_class.new(@session).call }
-      .to raise_error(described_class::InvalidAssessment, "Skill 'RESTful API Design' is listed more than once")
+      .to raise_error(described_class::InvalidAssessment, 'duplicate skills')
 
     @session.reload
     expect(@session.status).to eq('pending')
     expect(@session.coverage_maps.count).to eq(0)
+  end
+
+  it 'raises InvalidAssessment with a generic reason when the assessment is invalid for another reason' do
+    @assessment.update_column(:name, '')
+
+    expect { described_class.new(@session).call }
+      .to raise_error(described_class::InvalidAssessment, 'invalid configuration')
   end
 end

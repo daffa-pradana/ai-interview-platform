@@ -17,17 +17,14 @@ RSpec.describe 'Sessions', type: :request do
 
   describe 'GET /api/v1/assessments/:id/sessions' do
     it 'returns the failure code and the assessor message of a failed session' do
-      @session.record_failure!('assessment_invalid', "Skill 'RESTful API Design' is listed more than once")
+      @session.record_failure!('assessment_invalid', 'duplicate skills')
 
       get_json "/api/v1/assessments/#{@assessment.id}/sessions", {}, as_admin(@organization)
 
       expect(response).to have_http_status(200)
       session = response_body['sessions'].first
       expect(session['failure_code']).to eq('assessment_invalid')
-      expect(session['failure_message']).to eq(
-        "Interview couldn't start: the assessment's skills need fixing " \
-        "(Skill 'RESTful API Design' is listed more than once)"
-      )
+      expect(session['failure_message']).to eq('Assessment needs fixing (duplicate skills).')
     end
 
     it 'returns no failure for a session that has not failed' do
