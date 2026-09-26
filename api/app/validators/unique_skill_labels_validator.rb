@@ -2,7 +2,7 @@
 
 class UniqueSkillLabelsValidator < ActiveModel::Validator
   def validate(record)
-    duplicate = labels(record).group_by(&:itself).values.find { |group| group.size > 1 }
+    duplicate = labels(record).group_by(&:downcase).values.find { |group| group.size > 1 }
     return unless duplicate
 
     record.errors.add(:base, :duplicate_skill_labels, message: "Skill '#{duplicate.first}' is listed more than once")
