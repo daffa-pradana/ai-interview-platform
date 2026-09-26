@@ -526,7 +526,7 @@ class AudioWebSocketMiddleware
   end
 
   def end_after_grace_period(state)
-    return false if state.session.reload.ended?
+    return false unless state.session.reload.active?
 
     Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
     Sessions::EndHandler.new(state.session).call(reason: 'error', failure_code: 'candidate_disconnected')
