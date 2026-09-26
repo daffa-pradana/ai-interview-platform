@@ -81,4 +81,26 @@ describe("AssessmentEditPage", () => {
         expect(screen.getByLabelText(/Role title/)).toHaveValue("Senior Backend Engineer");
         expect(screen.getAllByRole("button", { name: "Remove skill" })).toHaveLength(2);
     });
+
+    it("shows a rejected save in a dismissible alert", async () => {
+        vi.mocked(assessmentsApi.update).mockRejectedValue({
+            response: { data: { errors: [{ message: "Skill 'RESTful API Design' is listed more than once" }] } },
+        });
+        renderEditPage();
+
+        await screen.findAllByRole("button", { name: "Remove skill" });
+        await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent("Skill 'RESTful API Design' is listed more than once");
+
+        await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("tells the assessor that skill names must be unique", async () => {
+        renderEditPage();
+
+        expect(await screen.findByText(/Each skill needs its own name/)).toBeInTheDocument();
+    });
 });
