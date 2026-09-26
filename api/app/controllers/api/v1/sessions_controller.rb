@@ -175,6 +175,8 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          failure_code:     session.failure_code,
+          failure_message:  session.failure_message,
           created_at:       session.created_at
         }
       end
