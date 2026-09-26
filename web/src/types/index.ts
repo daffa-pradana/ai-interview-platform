@@ -44,6 +44,8 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  failure_code?: string | null;
+  failure_message?: string | null;
   created_at?: string;
 }
 

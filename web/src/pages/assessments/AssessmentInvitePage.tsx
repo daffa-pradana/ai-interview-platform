@@ -35,6 +35,8 @@ function SessionRow({
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  const couldNotStart = isPending && !!session.failure_code;
+  const isFailed = isEnded && session.end_reason === "error";
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
@@ -45,6 +47,9 @@ function SessionRow({
         </div>
         <div className="space-y-0.5">
           <div className="text-sm font-medium">{displayName}</div>
+          {(isFailed || couldNotStart) && (
+            <div className="text-xs text-destructive">{session.failure_message ?? "Reason not recorded"}</div>
+          )}
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -54,10 +59,16 @@ function SessionRow({
       </div>
 
       <div className="flex items-center gap-3">
-        {isPending && (
+        {isPending && !couldNotStart && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
+          </span>
+        )}
+        {couldNotStart && (
+          <span className="flex items-center gap-1 text-xs text-destructive">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+            Couldn't start
           </span>
         )}
         {isLive && (
@@ -66,7 +77,7 @@ function SessionRow({
             Live
           </span>
         )}
-        {isEnded && session.end_reason === "error" && (
+        {isFailed && (
           <span className="flex items-center gap-1 text-xs text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
             Failed
