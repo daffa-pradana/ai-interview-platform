@@ -4,13 +4,19 @@ module Sessions
   # Activates a pending session and initializes coverage map rows from assessment skills.
   # Called when a candidate connects to the audio WebSocket and begins the interview.
   class StartHandler
+    class InvalidAssessment < StandardError; end
+
     def initialize(session)
       @session = session
     end
 
     def call
+      assessment = @session.assessment
+      raise InvalidAssessment, assessment.errors.full_messages.first unless assessment.valid?
+
       ActiveRecord::Base.transaction do
-        @session.update!(status: 'active', started_at: Time.current)
+        @session.update!(status: 'active', started_at: Time.current,
+                         failure_code: nil, failure_detail: nil, failed_at: nil)
         initialize_coverage_maps
       end
 
