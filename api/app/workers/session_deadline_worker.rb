@@ -16,18 +16,19 @@ class SessionDeadlineWorker
   end
 
   def self.end_overdue_sessions
-    Session.unscoped.active.find_each { |session| new.perform(session.id) }
+    Session.unscoped.active.find_each.select { |session| new.perform(session.id) }.map(&:id)
   end
 
   def perform(session_id)
     session = Session.unscoped.find_by(id: session_id)
-    return unless session&.active? && session.started_at
-    return if Time.current < self.class.deadline_for(session)
+    return false unless session&.active? && session.started_at
+    return false if Time.current < self.class.deadline_for(session)
 
     if session.transcript_turns.exists?(speaker: 'candidate')
       Sessions::EndHandler.new(session).call(reason: 'time_ceiling')
     else
       Sessions::EndHandler.new(session).call(reason: 'error', failure_code: 'candidate_disconnected')
     end
+    true
   end
 end
