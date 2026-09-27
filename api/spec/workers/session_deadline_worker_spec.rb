@@ -79,8 +79,7 @@ RSpec.describe SessionDeadlineWorker do
       overdue = create_session(status: 'active', started_at: 2.days.ago)
       running = create_session(status: 'active', started_at: 2.minutes.ago)
 
-      described_class.end_overdue_sessions
-
+      expect(described_class.end_overdue_sessions).to eq([overdue.id])
       expect(overdue.reload.status).to eq('ended')
       expect(running.reload.status).to eq('active')
     end
