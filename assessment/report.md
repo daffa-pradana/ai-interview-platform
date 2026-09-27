@@ -62,7 +62,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | Sev | Finding | Service | Type | Impact on the real workflow |
 |---|---|---|---|---|
 | **P0** | Scoring client is hard-coded to Gemini API `v1` and ships dead model names; with a new API key **no** portfolio, fit-gap or coverage call succeeds | api | Broken | Interviews run but never produce a result; the live monitor's coverage stays "Not Yet" |
-| **P0** *(unverified, escalated)* | `Portfolio`, `PortfolioSkill`, `FitGapReport`, `AssessorOverride` have no `tenant_id` | api | Broken | Potential cross-organization access to candidate portfolios (UU PDP) |
+| **P0** *(confirmed by test, escalated)* | `Portfolio`, `PortfolioSkill`, `FitGapReport`, `AssessorOverride` have no `tenant_id` and are looked up by bare, sequential ids | api | Broken | An admin of **any** organization can export another company's candidate portfolio (verbatim candidate quotes, AI summaries, levels) and **overwrite a candidate's skill level**: `spec/requests/tenant_isolation_spec.rb`, export 200 and override 201 where 404 is expected (UU PDP) |
 | P1 ✅ | An assessment with a duplicated skill crashes every interview on the `coverage_maps` unique index | api+web | Broken | Every invited candidate is blocked; 107 silent reconnects |
 | P1 ✅ | Failed sessions show a bare "Failed"; the cause exists only in the server log | api+web | Missing | Assessor cannot decide to re-invite, fix, or reject |
 | P1 ✅ | Candidate is told "Interview Complete, the interview has been recorded" when the interview failed (start failure, lost connection, or reopening a failed link) | web+api | Broken | Candidate believes they were assessed |
@@ -83,7 +83,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | P2 ✅ | Mobile layout: the navbar overflowed at 375 px and pushed every page left | web | Broken | Unusable on phones |
 
 **Constraint signal** (what I would escalate to a Tech Lead on day one):
-1. **Tenant isolation of portfolio data** is unverified and is the highest-risk item; I did not change it because it needs a data migration and a product decision on existing rows.
+1. **Tenant isolation of portfolio data** is the highest-risk item and is **confirmed by a test** (`tenant_isolation_spec.rb`: another organization exports a portfolio with 200 and overrides a skill level with 201). The access through a session is protected; the direct `/portfolios/:id` and `/portfolio_skills/:id` routes are not. I did not ship the fix in this PR because it needs a staged migration on production candidate data: add nullable `tenant_id` columns, backfill them from each portfolio's session, handle rows that can't be traced, then enforce `NOT NULL` and tenant scoping, with a backup and a dry run first. A wrong backfill would itself leak data. The two examples are committed as `pending` with this reason: the assertions are unchanged, and RSpec will fail the build the day the fix lands, so the marker has to be removed.
 2. **Vendor drift:** the text client is pinned to an API version where current models are unavailable; model names are duplicated between config and code with different defaults.
 3. **Shared tables** (`users`, `organizations`) belong to another service, so real login cannot be exercised standalone.
 4. **The real-time audio middleware** (~770 lines, EventMachine + Faye + Gemini Live) had no tests. I added unit coverage for its failure paths, but an end-to-end WebSocket test is still missing.
@@ -155,7 +155,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 
 ## 6. Limitations and next steps
 
-- Verify and fix tenant isolation for portfolio data (P0 escalation).
+- Fix tenant isolation for portfolio data with the staged migration above (P0, confirmed); remove the two `pending` markers.
 - Make the Gemini API version and model names configuration, with a boot-time smoke check.
 - A "not assessed" state for skills without evidence, surfaced in portfolio and fit-gap.
 - HTTP timeouts for Gemini calls; classify temporary vs permanent generation failures; skip portfolio generation when the candidate never answered.
