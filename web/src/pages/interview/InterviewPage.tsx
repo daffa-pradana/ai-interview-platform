@@ -234,7 +234,7 @@ export default function InterviewPage() {
 
   if (interviewState === "failed") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-xl mx-auto px-4 py-16 text-center space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
           <CircleAlert className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
         </div>
@@ -247,7 +247,7 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
