@@ -9,6 +9,25 @@ RSpec.describe 'Assessments', type: :request do
     )
   end
 
+  describe 'GET /api/v1/assessments' do
+    it "includes why the latest session failed" do
+      within_organization do
+        assessment = Assessment.new(name: 'Jr. Backend Engineer', time_limit_min: 30, created_by: 1)
+        assessment.save!
+        Session.new(assessment: assessment, candidate_name: 'Test Candidate A').save!
+        assessment.sessions.last.record_failure!('assessment_invalid', 'duplicate skills')
+      end
+
+      get_json '/api/v1/assessments', {}, as_admin(@organization)
+
+      latest = response_body['assessments'].first['latest_session']
+      expect(latest).to include(
+        'status' => 'pending', 'failure_code' => 'assessment_invalid',
+        'failure_message' => 'Assessment needs fixing (duplicate skills).'
+      )
+    end
+  end
+
   describe 'POST /api/v1/assessments' do
     it 'returns ok with valid inputs' do
       post_json '/api/v1/assessments', {
