@@ -1,9 +1,9 @@
 # AI Interview Platform: making interview failures visible and actionable
 
 **Candidate:** Daffa Pradana · **Role:** Fullstack Product Engineer (Backend depth)
-**Pull request:** `<PR LINK>` (Option A, single PR from `daffa-pradana:feat/interview-failure-visibility` into `rakamindev:main`)
-**Seeded-fault branch:** `<LINK to scratch/seeded-fault-duplicate-skills>`
-**Video (4 min):** `<VIDEO LINK>`
+**Pull request:** [rakamindev/ai-interview-platform#148](https://github.com/rakamindev/ai-interview-platform/pull/148) (Option A, single PR from `daffa-pradana:feat/interview-failure-visibility` into `rakamindev:main`)
+**Seeded-fault branch:** [scratch/seeded-fault-duplicate-skills](https://github.com/daffa-pradana/ai-interview-platform/tree/scratch/seeded-fault-duplicate-skills)
+**Video:** [Loom walkthrough](https://www.loom.com/share/ac5d668f2877449a973838cfa7d9560d)
 
 > Every claim below maps to a commit, a test, a screenshot or a log line.
 
@@ -24,7 +24,7 @@ The revamp, across `api/` and `web/`:
 4. **Never leave it hanging**: every interview gets a durable deadline that survives server restarts, so a session can no longer stay "Live" forever (one had been "Live" for 48.5 hours on a 10-minute assessment), and a candidate who reopens a failed interview is never told it was completed.
 5. **Protect candidates' data**: another organization could export and overwrite a candidate's portfolio by guessing its id. I confirmed it with a test and fixed it by scoping every lookup to the requesting organization.
 
-Everything is test-driven (23 red commits before their fixes), covered by 56 RSpec examples and 25 Vitest tests that I built from zero, run in a new GitHub Actions workflow, proven by a seeded-fault branch, and verified through six manual QA gates.
+Everything is test-driven (24 red commits before their fixes), covered by 57 RSpec examples and 25 Vitest tests that I built from zero, run in a new GitHub Actions workflow, proven by a seeded-fault branch, and verified through six manual QA gates.
 
 ---
 
@@ -81,6 +81,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | P3 | CORS allows any origin (`*`) | api | Hardening | Low risk with Bearer tokens, should be restricted |
 | P3 | Vacancy and Assessment are unrelated; skills are defined twice; vacancies cannot be closed | both | Missing | Drift between the job and the interview |
 | P3 | A portfolio is generated even when the candidate never said a word | api | Missing | Wasted AI calls and a meaningless result (pairs with the "not assessed" P1) |
+| P1 ✅ | The app could not boot with eager loading (production and CI): two WebSocket middleware file names don't match their class names, so Zeitwerk raised `NameError` at boot. Found by the new CI on its first run | api | Broken | Any production deploy (`eager_load = true`) fails to start; local development hid it |
 | P2 ✅ | Mobile layout: the navbar overflowed at 375 px and pushed every page left | web | Broken | Unusable on phones |
 
 **Constraint signal** (what I would escalate to a Tech Lead on day one):
@@ -116,7 +117,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | Wording | Backend owns short assessor messages; one fixed candidate sentence | Showing raw validation text: too detailed for assessors, leaks internals to candidates |
 | Error presentation | Bottom-right, dismissible toast (subtle red, accent bar, title) built from existing components and the app's status colors | A toast library (new dependency); a GIF or illustration (weight, tone) |
 
-**Product impact vs cost.** **+353 / −64 lines of application code** (29 files) plus a test harness built from zero (whole PR: 66 files, +2,789 / −66, most of it tests and these documents), two additive migrations, no new runtime dependency (+0.6 kB gzipped on the web bundle).
+**Product impact vs cost.** **+355 / −63 lines of application code** (29 files, excluding tests and test tooling) plus a test harness built from zero (whole PR: 71 files, about +2,800 / −66, most of it tests and these documents), two additive migrations, no new runtime dependency (+0.6 kB gzipped on the web bundle).
 
 **Maintainability.** New failure causes are one enum value, one message and one call site. The validator is reusable for vacancy skills. The migration is reversible and verified up → down → up.
 
@@ -124,9 +125,9 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 
 ## 5. Step 5: Execution proof
 
-**Shape of the work:** 74 commits; **23 red commits** each precede the change that turned them green. Two additive, reversible migrations.
+**Shape of the work:** 78 commits; **24 red commits** each precede the change that turned them green. Two additive, reversible migrations.
 
-**Tests:** RSpec 56 examples in 10 files (models, services, workers, request specs through the real auth and tenant middleware, WebSocket failure paths); Vitest 25 tests in 8 files (create/edit forms, list and invite page states, candidate page, WebSocket hook with a fake socket and fake timers).
+**Tests:** RSpec 57 examples in 11 files (an eager-load boot check, models, services, workers, request specs through the real auth and tenant middleware, WebSocket failure paths); Vitest 25 tests in 8 files (create/edit forms, list and invite page states, candidate page, WebSocket hook with a fake socket and fake timers).
 
 **Seeded fault test.** On `scratch/seeded-fault-duplicate-skills` I changed one word, comparing skill labels case-sensitively. **4 tests across the model and API layers went red.** The revert is a separate commit; red and green runs are attached in the appendix.
 
@@ -153,7 +154,12 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 
 **Manual QA.** Six gates (A to F), all passed after fixes; four defects were found only by QA (the grace-period bug, the mobile overflow, the silent cleanup task, the 48-hour orphan):
 
-`<SCREENSHOTS: see shot list>`
+| | Before (`main`) | After (this PR) |
+|---|---|---|
+| Candidate | ![Candidate stuck on "Briefly reconnecting", timer frozen at 10:00, mic on](screenshots/before-candidate-reconnecting.png) | ![Candidate sees "Interview unavailable" with a clear next step](screenshots/after-candidate-unavailable.png) |
+| Assessor | Bare "Failed" or "Awaiting candidate"; the cause is only in the server log | ![Invite page shows "Couldn't start · Assessment needs fixing (duplicate skills)"](screenshots/after-assessor-reason.png) |
+
+Before: the candidate is told it is a brief reconnect, the timer never moves, and the page says "Listening…" with the microphone on, while every attempt fails on the duplicate skill (107 attempts in 2 minutes in the server log).
 
 ## 6. Limitations and next steps
 
