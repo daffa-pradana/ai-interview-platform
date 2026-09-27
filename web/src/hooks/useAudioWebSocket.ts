@@ -133,7 +133,8 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onFatalError?.("The connection to your interview was lost. Refresh this page to try again, or contact the person who invited you.");
+        onStateChange("failed");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onFatalError]);
