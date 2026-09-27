@@ -64,6 +64,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 |---|---|---|---|---|
 | **P0** | Scoring client is hard-coded to Gemini API `v1` and ships dead model names; with a new API key **no** portfolio, fit-gap or coverage call succeeds | api | Broken | Interviews run but never produce a result; the live monitor's coverage stays "Not Yet" |
 | P0 ✅ | `Portfolio`, `PortfolioSkill` (and fit-gap reports) were looked up by bare, sequential ids with no tenant check | api | Broken | An admin of **any** organization could export another company's candidate portfolio (verbatim candidate quotes, AI summaries, levels), **overwrite a candidate's skill level**, and generate or read fit-gap reports on it. Confirmed by `spec/requests/tenant_isolation_spec.rb` (200/201/202 where 404 was expected), then fixed |
+| P1 ✅ | The app could not boot with eager loading (production and CI): two WebSocket middleware file names don't match their class names, so Zeitwerk raised `NameError` at boot. Found by the new CI on its first run | api | Broken | Any production deploy (`eager_load = true`) fails to start; local development hid it |
 | P1 ✅ | An assessment with a duplicated skill crashes every interview on the `coverage_maps` unique index | api+web | Broken | Every invited candidate is blocked; 107 silent reconnects |
 | P1 ✅ | Failed sessions show a bare "Failed"; the cause exists only in the server log | api+web | Missing | Assessor cannot decide to re-invite, fix, or reject |
 | P1 ✅ | Candidate is told "Interview Complete, the interview has been recorded" when the interview failed (start failure, lost connection, or reopening a failed link) | web+api | Broken | Candidate believes they were assessed |
@@ -81,7 +82,6 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | P3 | CORS allows any origin (`*`) | api | Hardening | Low risk with Bearer tokens, should be restricted |
 | P3 | Vacancy and Assessment are unrelated; skills are defined twice; vacancies cannot be closed | both | Missing | Drift between the job and the interview |
 | P3 | A portfolio is generated even when the candidate never said a word | api | Missing | Wasted AI calls and a meaningless result (pairs with the "not assessed" P1) |
-| P1 ✅ | The app could not boot with eager loading (production and CI): two WebSocket middleware file names don't match their class names, so Zeitwerk raised `NameError` at boot. Found by the new CI on its first run | api | Broken | Any production deploy (`eager_load = true`) fails to start; local development hid it |
 | P2 ✅ | Mobile layout: the navbar overflowed at 375 px and pushed every page left | web | Broken | Unusable on phones |
 
 **Constraint signal** (what I would escalate to a Tech Lead on day one):
@@ -125,7 +125,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 
 ## 5. Step 5: Execution proof
 
-**Shape of the work:** 78 commits; **24 red commits** each precede the change that turned them green. Two additive, reversible migrations.
+**Shape of the work:** 79 commits; **24 red commits** each precede the change that turned them green. Two additive, reversible migrations.
 
 **Tests:** RSpec 57 examples in 11 files (an eager-load boot check, models, services, workers, request specs through the real auth and tenant middleware, WebSocket failure paths); Vitest 25 tests in 8 files (create/edit forms, list and invite page states, candidate page, WebSocket hook with a fake socket and fake timers).
 
