@@ -11,6 +11,8 @@ export interface Assessment {
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
+    failure_code?: string | null;
+    failure_message?: string | null;
   };
 }
 
