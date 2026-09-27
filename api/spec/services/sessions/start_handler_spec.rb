@@ -26,6 +26,14 @@ RSpec.describe Sessions::StartHandler do
     expect(@session.coverage_maps.pluck(:skill_label)).to eq(['RESTful API Design'])
   end
 
+  it 'schedules a deadline for the time limit plus a buffer' do
+    described_class.new(@session).call
+
+    job = SessionDeadlineWorker.jobs.last
+    expect(job['args']).to eq([@session.id])
+    expect(Time.zone.at(job['at'])).to be_within(5.seconds).of(@session.reload.started_at + 30.minutes + 5.minutes)
+  end
+
   it 'clears a failure recorded by an earlier attempt' do
     @session.record_failure!('assessment_invalid', 'earlier attempt')
 
