@@ -91,7 +91,7 @@ export default function AssessmentListPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-sm">{a.name}</p>
                   <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 shrink-0 whitespace-nowrap">
                       <Clock className="h-3 w-3" />
                       {a.time_limit_min} min
                     </span>
