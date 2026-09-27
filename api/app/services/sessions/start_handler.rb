@@ -21,6 +21,7 @@ module Sessions
         initialize_coverage_maps
       end
 
+      SessionDeadlineWorker.schedule_for(@session)
       publish_status_update
       Rails.logger.info("[N5/StartHandler] Session #{@session.id} activated")
       @session
