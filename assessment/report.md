@@ -22,8 +22,9 @@ The revamp, across `api/` and `web/`:
 3. **Recover from it**: a failure to start keeps the invite link valid, so after the assessor fixes the assessment the **same link works**. The candidate sees one honest, final message, no reconnect loop, and their microphone is released.
 
 4. **Never leave it hanging**: every interview gets a durable deadline that survives server restarts, so a session can no longer stay "Live" forever (one had been "Live" for 48.5 hours on a 10-minute assessment), and a candidate who reopens a failed interview is never told it was completed.
+5. **Protect candidates' data**: another organization could export and overwrite a candidate's portfolio by guessing its id. I confirmed it with a test and fixed it by scoping every lookup to the requesting organization.
 
-Everything is test-driven (22 red commits before their fixes), covered by 47 RSpec examples and 25 Vitest tests that I built from zero, run in a new GitHub Actions workflow, proven by a seeded-fault branch, and verified through six manual QA gates.
+Everything is test-driven (23 red commits before their fixes), covered by 56 RSpec examples and 25 Vitest tests that I built from zero, run in a new GitHub Actions workflow, proven by a seeded-fault branch, and verified through six manual QA gates.
 
 ---
 
@@ -62,7 +63,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | Sev | Finding | Service | Type | Impact on the real workflow |
 |---|---|---|---|---|
 | **P0** | Scoring client is hard-coded to Gemini API `v1` and ships dead model names; with a new API key **no** portfolio, fit-gap or coverage call succeeds | api | Broken | Interviews run but never produce a result; the live monitor's coverage stays "Not Yet" |
-| **P0** *(confirmed by test, escalated)* | `Portfolio`, `PortfolioSkill`, `FitGapReport`, `AssessorOverride` have no `tenant_id` and are looked up by bare, sequential ids | api | Broken | An admin of **any** organization can export another company's candidate portfolio (verbatim candidate quotes, AI summaries, levels) and **overwrite a candidate's skill level**: `spec/requests/tenant_isolation_spec.rb`, export 200 and override 201 where 404 is expected (UU PDP) |
+| P0 ✅ | `Portfolio`, `PortfolioSkill` (and fit-gap reports) were looked up by bare, sequential ids with no tenant check | api | Broken | An admin of **any** organization could export another company's candidate portfolio (verbatim candidate quotes, AI summaries, levels), **overwrite a candidate's skill level**, and generate or read fit-gap reports on it. Confirmed by `spec/requests/tenant_isolation_spec.rb` (200/201/202 where 404 was expected), then fixed |
 | P1 ✅ | An assessment with a duplicated skill crashes every interview on the `coverage_maps` unique index | api+web | Broken | Every invited candidate is blocked; 107 silent reconnects |
 | P1 ✅ | Failed sessions show a bare "Failed"; the cause exists only in the server log | api+web | Missing | Assessor cannot decide to re-invite, fix, or reject |
 | P1 ✅ | Candidate is told "Interview Complete, the interview has been recorded" when the interview failed (start failure, lost connection, or reopening a failed link) | web+api | Broken | Candidate believes they were assessed |
@@ -83,7 +84,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | P2 ✅ | Mobile layout: the navbar overflowed at 375 px and pushed every page left | web | Broken | Unusable on phones |
 
 **Constraint signal** (what I would escalate to a Tech Lead on day one):
-1. **Tenant isolation of portfolio data** is the highest-risk item and is **confirmed by a test** (`tenant_isolation_spec.rb`: another organization exports a portfolio with 200 and overrides a skill level with 201). The access through a session is protected; the direct `/portfolios/:id` and `/portfolio_skills/:id` routes are not. I did not ship the fix in this PR because it needs a staged migration on production candidate data: add nullable `tenant_id` columns, backfill them from each portfolio's session, handle rows that can't be traced, then enforce `NOT NULL` and tenant scoping, with a backup and a dry run first. A wrong backfill would itself leak data. The two examples are committed as `pending` with this reason: the assertions are unchanged, and RSpec will fail the build the day the fix lands, so the marker has to be removed.
+1. **Tenant isolation of portfolio data** was the highest-risk item. I confirmed it with a test (another organization: export 200, override 201, fit-gap read 200, generate/regenerate 202) and **fixed it in this PR without a migration**: every id-based lookup now goes through `Portfolio.for_tenant` / `PortfolioSkill.for_tenant`, which join through the already tenant-scoped session, so another organization gets 404 (single primary-key walks, checked with EXPLAIN). What I'd still escalate is **defense in depth**: adding `tenant_id` to the portfolio tables so `TenantScoped` protects them automatically and a future endpoint can't forget the scope. That part needs a staged backfill on production data, so it belongs in its own reviewed change.
 2. **Vendor drift:** the text client is pinned to an API version where current models are unavailable; model names are duplicated between config and code with different defaults.
 3. **Shared tables** (`users`, `organizations`) belong to another service, so real login cannot be exercised standalone.
 4. **The real-time audio middleware** (~770 lines, EventMachine + Faye + Gemini Live) had no tests. I added unit coverage for its failure paths, but an end-to-end WebSocket test is still missing.
@@ -115,7 +116,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 | Wording | Backend owns short assessor messages; one fixed candidate sentence | Showing raw validation text: too detailed for assessors, leaks internals to candidates |
 | Error presentation | Bottom-right, dismissible toast (subtle red, accent bar, title) built from existing components and the app's status colors | A toast library (new dependency); a GIF or illustration (weight, tone) |
 
-**Product impact vs cost.** **+345 / −58 lines of application code** (25 files) plus a test harness built from zero (whole PR: 54 files, +1,902 / −60, most of it tests), one additive migration, no new runtime dependency (+0.6 kB gzipped on the web bundle).
+**Product impact vs cost.** **+353 / −64 lines of application code** (29 files) plus a test harness built from zero (whole PR: 66 files, +2,789 / −66, most of it tests and these documents), two additive migrations, no new runtime dependency (+0.6 kB gzipped on the web bundle).
 
 **Maintainability.** New failure causes are one enum value, one message and one call site. The validator is reusable for vacancy skills. The migration is reversible and verified up → down → up.
 
@@ -123,9 +124,9 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 
 ## 5. Step 5: Execution proof
 
-**Shape of the work:** 69 commits; **22 red commits** each precede the change that turned them green. Two additive, reversible migrations.
+**Shape of the work:** 74 commits; **23 red commits** each precede the change that turned them green. Two additive, reversible migrations.
 
-**Tests:** RSpec 47 examples in 9 files (models, services, workers, request specs through the real auth and tenant middleware, WebSocket failure paths); Vitest 25 tests in 8 files (create/edit forms, list and invite page states, candidate page, WebSocket hook with a fake socket and fake timers).
+**Tests:** RSpec 56 examples in 10 files (models, services, workers, request specs through the real auth and tenant middleware, WebSocket failure paths); Vitest 25 tests in 8 files (create/edit forms, list and invite page states, candidate page, WebSocket hook with a fake socket and fake timers).
 
 **Seeded fault test.** On `scratch/seeded-fault-duplicate-skills` I changed one word, comparing skill labels case-sensitively. **4 tests across the model and API layers went red.** The revert is a separate commit; red and green runs are attached in the appendix.
 
@@ -142,12 +143,13 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 
 **UI/UX states.** Error toast bottom-right (full width on mobile) with a subtle red background, accent bar and title, dismissible; unique-name tip; the assessment list shows the latest failure reason; mobile navbar and stacked rows at 375 px; final candidate screens centered; assessor states "Awaiting candidate", "Couldn't start", "Live", "Completed", "Failed", "Reason not recorded"; candidate "Interview unavailable" with icon; long text wraps; motion is CSS-only and disabled for reduced-motion users; icons are hidden from screen readers.
 
-**AI verification moments.** I used Claude Code as leverage and verified its output; five times it was wrong or risky:
+**AI verification moments.** I used Claude Code as leverage and verified its output; six times it was wrong or risky:
 1. It recommended `gemini-2.5-pro` from the model list; the API rejected it ("no longer available to new users"). The list shows what exists, not what a key can use.
 2. It claimed the invite page polls "with no stop condition"; reading the code showed it stops when every session has ended.
 3. A characterization test assumed saving outside a tenant returns `false`; running it showed it raises. The test was corrected to describe reality.
 4. It wrote a migration with `create_enum` inside `change` and predicted the rollback would raise `IrreversibleMigration`. **I ran the rollback**: it succeeded but silently left the enum type behind. Both the code and the prediction were wrong; fixed with explicit `up`/`down` and verified.
-5. Its draft let the 120 s grace period end interviews that never started, which silently broke the "same link works" promise. Its unit tests did not cover the socket-close path; **my manual QA caught it**, and a red test now reproduces it.
+5. It claimed the cross-tenant fix *required* a data migration on production candidate data. I asked whether the lookups could simply be scoped through the tenant-scoped session; they could, and that is the fix shipped (no migration). The migration is only needed for defense in depth.
+6. Its draft let the 120 s grace period end interviews that never started, which silently broke the "same link works" promise. Its unit tests did not cover the socket-close path; **my manual QA caught it**, and a red test now reproduces it.
 
 **Manual QA.** Six gates (A to F), all passed after fixes; four defects were found only by QA (the grace-period bug, the mobile overflow, the silent cleanup task, the 48-hour orphan):
 
@@ -155,7 +157,7 @@ Legend: **Broken** = specified but defective; **Missing** = never specified. ✅
 
 ## 6. Limitations and next steps
 
-- Fix tenant isolation for portfolio data with the staged migration above (P0, confirmed); remove the two `pending` markers.
+- Defense in depth for tenant isolation: `tenant_id` on the portfolio tables with a staged backfill, so `TenantScoped` covers them automatically.
 - Make the Gemini API version and model names configuration, with a boot-time smoke check.
 - A "not assessed" state for skills without evidence, surfaced in portfolio and fit-gap.
 - HTTP timeouts for Gemini calls; classify temporary vs permanent generation failures; skip portfolio generation when the candidate never answered.
