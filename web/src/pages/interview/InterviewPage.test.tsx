@@ -61,6 +61,26 @@ describe("InterviewPage", () => {
         expect(screen.queryByText(/reconnecting/i)).not.toBeInTheDocument();
     });
 
+    it("does not claim a failed interview was completed when the candidate reopens the link", async () => {
+        vi.mocked(sessionsApi.getCandidateInfo).mockResolvedValue({
+            data: {
+                session_id: 1, session_status: "ended", ended_with_error: true,
+                role_title: "Jr. Frontend Engineer", time_limit_min: 10,
+            },
+        } as never);
+        render(
+            <MemoryRouter initialEntries={["/interview/test-token"]}>
+                <Routes>
+                    <Route path="/interview/:token" element={<InterviewPage />} />
+                </Routes>
+            </MemoryRouter>,
+        );
+
+        expect(await screen.findByText("Interview unavailable")).toBeInTheDocument();
+        expect(screen.getByText("This interview couldn't be completed. Please contact the person who invited you.")).toBeInTheDocument();
+        expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+    });
+
     it("turns the microphone off when the interview cannot start", async () => {
         await startAndFailInterview();
 

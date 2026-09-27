@@ -15,6 +15,26 @@ RSpec.describe 'Sessions', type: :request do
     end
   end
 
+  describe 'GET /api/v1/sessions/:token/candidate' do
+    it 'tells the candidate page that the session ended with an error, without the reason' do
+      @session.update!(status: 'ended', end_reason: 'error', failure_code: 'candidate_disconnected')
+
+      get_json "/api/v1/sessions/#{@session.invite_token}/candidate"
+
+      expect(response).to have_http_status(200)
+      expect(response_body).to include('session_status' => 'ended', 'ended_with_error' => true)
+      expect(response_body.keys).not_to include('failure_code', 'failure_message', 'failure_detail')
+    end
+
+    it 'does not flag a session that completed normally' do
+      @session.update!(status: 'ended', end_reason: 'time_ceiling')
+
+      get_json "/api/v1/sessions/#{@session.invite_token}/candidate"
+
+      expect(response_body['ended_with_error']).to eq(false)
+    end
+  end
+
   describe 'GET /api/v1/assessments/:id/sessions' do
     it 'returns the failure code and the assessor message of a failed session' do
       @session.record_failure!('assessment_invalid', 'duplicate skills')
