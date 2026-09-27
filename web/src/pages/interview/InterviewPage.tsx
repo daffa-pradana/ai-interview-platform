@@ -47,7 +47,12 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended" && res.data.ended_with_error) {
+          setFatalMessage("This interview couldn't be completed. Please contact the person who invited you.");
+          setInterviewState("failed");
+        } else if (res.data.session_status === "ended") {
+          setInterviewState("complete");
+        }
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
