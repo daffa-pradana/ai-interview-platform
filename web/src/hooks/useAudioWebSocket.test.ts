@@ -72,6 +72,25 @@ describe("useAudioWebSocket", () => {
         expect(onFatalError).toHaveBeenCalledWith("Please contact the person who invited you.");
     });
 
+    it("reports a lost connection as failed, not complete, once reconnect attempts run out", () => {
+        const { onStateChange, onFatalError } = renderSocketHook();
+
+        act(() => {
+            for (const delay of [1_000, 2_000, 4_000]) {
+                FakeWebSocket.instances[FakeWebSocket.instances.length - 1].close();
+                vi.advanceTimersByTime(delay);
+            }
+            FakeWebSocket.instances[FakeWebSocket.instances.length - 1].close();
+        });
+
+        expect(FakeWebSocket.instances).toHaveLength(4);
+        expect(onStateChange).toHaveBeenLastCalledWith("failed");
+        expect(onStateChange).not.toHaveBeenCalledWith("complete");
+        expect(onFatalError).toHaveBeenCalledWith(
+            "The connection to your interview was lost. Refresh this page to try again, or contact the person who invited you.",
+        );
+    });
+
     it("still reconnects after an unexpected drop", () => {
         const { onStateChange } = renderSocketHook();
 
